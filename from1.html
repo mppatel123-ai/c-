@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Advanced Contact & Upload Form</title>
+    <meta name="description" content="Advanced HTML form with client-side validation, accessibility, file preview, drag & drop, AJAX upload and progressive enhancement.">
+    <style>
+        :root{
+            --bg:#0f1724; --card:#ffffff; --muted:#6b7280; --accent:#2563eb; --danger:#dc2626;
+            --radius:10px; --max-w:920px; --gap:16px;
+            color-scheme: light;
+        }
+        *{box-sizing:border-box}
+        body{
+            margin:0; font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
+            background:linear-gradient(180deg,#eef2ff 0%, #f8fafc 100%); color:#0f1724; padding:40px;
+            display:flex; align-items:center; justify-content:center; min-height:100vh;
+        }
+        .container{
+            width:100%; max-width:var(--max-w);
+            background:var(--card); border-radius:var(--radius); box-shadow:0 8px 30px rgba(2,6,23,.08);
+            padding:28px;
+        }
+        h1{margin:0 0 6px; font-size:20px}
+        p.lead{margin:0 0 22px; color:var(--muted); font-size:14px}
+
+        form{display:grid; grid-template-columns:repeat(12,1fr); gap:var(--gap); align-items:start}
+        .col-12{grid-column:1 / -1}
+        .col-6{grid-column: span 6}
+        .col-4{grid-column: span 4}
+        .col-3{grid-column: span 3}
+
+        .field{
+            position:relative; display:flex; flex-direction:column; gap:8px;
+        }
+        label{font-size:13px; color:var(--muted)}
+        input[type="text"], input[type="email"], input[type="tel"],
+        input[type="password"], textarea, select{
+            width:100%; padding:12px 12px; border-radius:8px; border:1px solid #e6edf3; background:#ffffff;
+            font-size:14px; outline:none; transition:box-shadow .15s, border-color .12s;
+        }
+        input:focus, textarea:focus, select:focus{box-shadow:0 0 0 4px rgba(37,99,235,0.08); border-color:var(--accent)}
+        small.helper{color:var(--muted); font-size:12px}
+
+        .row-inline{display:flex; gap:12px}
+        .char-count{font-size:12px; color:var(--muted); text-align:right}
+
+        /* File drop area */
+        .dropzone{
+            border:2px dashed #e6edf3; padding:14px; border-radius:8px; display:flex; gap:12px; align-items:center;
+            justify-content:space-between; background:#fbfdff;
+        }
+        .dropzone.dragover{border-color:var(--accent); background:rgba(37,99,235,0.03)}
+        .files-preview{display:flex; gap:8px; flex-wrap:wrap}
+        .file-pill{display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px; background:#f8fafc; border:1px solid #eef2ff; font-size:13px}
+        .file-thumb{width:48px; height:48px; border-radius:6px; background:#fff; display:flex; align-items:center; justify-content:center; overflow:hidden; border:1px solid #e6edf3}
+        .file-thumb img{width:100%; height:100%; object-fit:cover}
+
+        .actions{display:flex; gap:12px; align-items:center}
+        button.btn{
+            padding:10px 14px; border-radius:8px; border:0; cursor:pointer; font-weight:600;
+            background:var(--accent); color:#fff; box-shadow:0 6px 18px rgba(37,99,235,.12);
+        }
+        button.ghost{background:transparent; border:1px solid #e6edf3; color:var(--muted)}
+        .status{font-size:13px; color:var(--muted)}
+
+        .progress{
+            width:100%; height:8px; background:#eef2ff; border-radius:999px; overflow:hidden;
+            margin-top:8px;
+        }
+        .progress > i{display:block; height:100%; width:0%; background:linear-gradient(90deg,#22c55e,#06b6d4); transition:width .2s}
+
+        .error{color:var(--danger); font-size:13px}
+        @media (max-width:720px){
+            .col-6{grid-column:1 / -1}
+            .col-4{grid-column:1 / -1}
+            .col-3{grid-column:1 / -1}
+            .row-inline{flex-direction:column}
+        }
+    </style>
+</head>
+<body>
+    <form action="from1.php" action="POST"> 
+    <div class="container" role="region" aria-label="Contact form container">
+        <h1>Contact & Upload (Advanced)</h1>
+        <p class="lead">Accessible, responsive form with client-side validation, drag & drop uploads and AJAX submit.</p>
+
+        <form id="contactForm" class="col-12" method="post" action="/submit" novalidate aria-describedby="form-desc">
+            <div id="form-desc" hidden>Send message with optional file attachments</div>
+
+            <div class="field col-6">
+                <label for="fullname">Full name</label>
+                <input id="fullname" name="fullname" type="text" autocomplete="name" required minlength="2" placeholder="Jane Doe" aria-required="true">
+                <div class="error" id="err-fullname" aria-live="polite"></div>
+            </div>
+
+            <div class="field col-6">
+                <label for="email">Email</label>
+                <input id="email" name="email" type="email" autocomplete="email" required placeholder="you@example.com">
+                <div class="error" id="err-email" aria-live="polite"></div>
+            </div>
+
+            <div class="field col-6">
+                <label for="phone">Phone</label>
+                <input id="phone" name="phone" type="tel" placeholder="+1 555 123 4567" inputmode="tel" pattern="^[+()0-9\s-]{7,25}$">
+                <small class="helper">Optional — international format accepted</small>
+            </div>
+
+            <div class="field col-6">
+                <label for="subject">Subject</label>
+                <select id="subject" name="subject" required>
+                    <option value="">Choose...</option>
+                    <option>General inquiry</option>
+                    <option>Support</option>
+                    <option>Partnership</option>
+                    <option>Bug report</option>
+                </select>
+            </div>
+
+            <div class="field col-12">
+                <label for="message">Message</label>
+                <textarea id="message" name="message" rows="6" required minlength="10" maxlength="2000" placeholder="Write your message..."></textarea>
+                <div class="row-inline">
+                    <small class="helper">Be as detailed as you need. Max 2000 characters.</small>
+                    <div class="char-count" id="msg-count">0 / 2000</div>
+                </div>
+                <div class="error" id="err-message" aria-live="polite"></div>
+            </div>
+
+            <div class="field col-8">
+                <label>Attachments</label>
+                <div id="dropzone" class="dropzone" tabindex="0" role="region" aria-label="File upload dropzone">
+                    <div>
+                        <strong>Drag & drop files</strong>
+                        <div class="helper">or click to browse — images & documents up to 8MB each</div>
+                    </div>
+                    <input id="fileInput" name="files" type="file" multiple accept="image/*,application/pdf" style="display:none">
+                    <div class="files-preview" id="filesPreview" aria-live="polite"></div>
+                </div>
+                <div class="error" id="err-files"></div>
+            </div>
+
+            <div class="field col-4">
+                <label for="priority">Priority</label>
+                <div style="display:flex; gap:8px">
+                    <label><input type="radio" name="priority" value="low" checked> Low</label>
+                    <label><input type="radio" name="priority" value="normal"> Normal</label>
+                    <label><input type="radio" name="priority" value="high"> High</label>
+                </div>
+                <small class="helper">Selecting high will notify support team immediately.</small>
+            </div>
+
+            <!-- Honeypot anti-spam -->
+            <div style="display:none;">
+                <label>Do not fill</label>
+                <input name="website" tabindex="-1" autocomplete="off">
+            </div>
+
+            <div class="field col-12">
+                <div class="actions">
+                    <button type="submit" id="submitBtn" class="btn">Send message</button>
+                    <button type="button" id="resetBtn" class="ghost">Reset</button>
+                    <div class="status" id="formStatus" aria-live="polite"></div>
+                </div>
+
+                <div class="progress" aria-hidden="true" style="margin-top:10px">
+                    <i id="xhrProgress"></i>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // Progressive-enhanced behaviors
+        (function(){
+            const form = document.getElementById('contactForm');
+            const fullname = document.getElementById('fullname');
+            const email = document.getElementById('email');
+            const message = document.getElementById('message');
+            const msgCount = document.getElementById('msg-count');
+            const dropzone = document.getElementById('dropzone');
+            const fileInput = document.getElementById('fileInput');
+            const filesPreview = document.getElementById('filesPreview');
+            const errFiles = document.getElementById('err-files');
+            const xhrProgress = document.getElementById('xhrProgress');
+            const formStatus = document.getElementById('formStatus');
+            const submitBtn = document.getElementById('submitBtn');
+            const resetBtn = document.getElementById('resetBtn');
+
+            let files = [];
+
+            // Helpers
+            function showError(el, msg){ el.textContent = msg || ''; }
+            function formatBytes(bytes){
+                if (bytes === 0) return '0 B';
+                const k = 1024, sizes = ['B','KB','MB','GB'];
+                const i = Math.floor(Math.log(bytes)/Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+
+            // Character counter
+            message.addEventListener('input', () => {
+                msgCount.textContent = message.value.length + ' / ' + message.maxLength;
+            });
+
+            // Phone formatting (simple)
+            const phone = document.getElementById('phone');
+            phone && phone.addEventListener('input', (e) => {
+                // Keep only numbers, spaces, plus, parentheses, hyphens
+                e.target.value = e.target.value.replace(/[^\d +()-]/g, '');
+            });
+
+            // Dropzone interactions
+            dropzone.addEventListener('click', () => fileInput.click());
+            dropzone.addEventListener('keydown', (e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); } });
+
+            ['dragenter','dragover'].forEach(ev => {
+                dropzone.addEventListener(ev, (e) => { e.preventDefault(); e.stopPropagation(); dropzone.classList.add('dragover'); });
+            });
+            ['dragleave','drop'].forEach(ev => {
+                dropzone.addEventListener(ev, (e) => { e.preventDefault(); e.stopPropagation(); dropzone.classList.remove('dragover'); });
+            });
+            dropzone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                if(!dt) return;
+                handleFileList(dt.files);
+            });
+
+            fileInput.addEventListener('change', (e) => handleFileList(e.target.files));
+
+            function handleFileList(list){
+                errFiles.textContent = '';
+                const maxSize = 8 * 1024 * 1024; // 8MB per file
+                Array.from(list).forEach(f => {
+                    if (f.size > maxSize) {
+                        errFiles.textContent = `File "${f.name}" exceeds 8MB limit.`;
+                        return;
+                    }
+                    // avoid duplicates by name+size
+                    const exists = files.some(x => x.name === f.name && x.size === f.size && x.lastModified === f.lastModified);
+                    if (!exists) files.push(f);
+                });
+                renderFiles();
+            }
+
+            function renderFiles(){
+                filesPreview.innerHTML = '';
+                files.forEach((f, idx) => {
+                    const pill = document.createElement('div'); pill.className = 'file-pill';
+                    const thumb = document.createElement('div'); thumb.className = 'file-thumb';
+                    if (f.type.startsWith('image/')) {
+                        const img = document.createElement('img');
+                        img.src = URL.createObjectURL(f);
+                        img.onload = () => URL.revokeObjectURL(img.src);
+                        thumb.appendChild(img);
+                    } else {
+                        thumb.textContent = f.name.split('.').pop().toUpperCase();
+                    }
+                    const meta = document.createElement('div');
+                    meta.innerHTML = `<div style="font-weight:600">${f.name}</div><div style="font-size:12px;color:var(--muted)">${formatBytes(f.size)}</div>`;
+                    const remove = document.createElement('button');
+                    remove.type = 'button';
+                    remove.textContent = 'Remove';
+                    remove.style.marginLeft = '8px';
+                    remove.style.border = '0';
+                    remove.style.background = 'transparent';
+                    remove.style.color = 'var(--accent)';
+                    remove.style.cursor = 'pointer';
+                    remove.addEventListener('click', () => { files.splice(idx,1); renderFiles(); });
+                    pill.appendChild(thumb); pill.appendChild(meta); pill.appendChild(remove);
+                    filesPreview.appendChild(pill);
+                });
+            }
+
+            // Client-side validation helper
+            function validate(){
+                let ok = true;
+                showError(document.getElementById('err-fullname'), '');
+                showError(document.getElementById('err-email'), '');
+                showError(document.getElementById('err-message'), '');
+
+                if (!fullname.value.trim() || fullname.value.trim().length < 2) {
+                    showError(document.getElementById('err-fullname'), 'Please enter your full name (at least 2 characters).');
+                    ok = false;
+                }
+                if (!email.checkValidity()) {
+                    showError(document.getElementById('err-email'), 'Please enter a valid email address.');
+                    ok = false;
+                }
+                if (!message.value.trim() || message.value.trim().length < 10) {
+                    showError(document.getElementById('err-message'), 'Message is too short (min 10 characters).');
+                    ok = false;
+                }
+                // Optionally validate files count/size
+                if (files.some(f => f.size > 8 * 1024 * 1024)) {
+                    showError(errFiles, 'One or more files exceed the 8MB size limit.');
+                    ok = false;
+                }
+                return ok;
+            }
+
+            // AJAX submit with XHR to show progress
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                formStatus.textContent = '';
+                if (!validate()) {
+                    formStatus.textContent = 'Please correct the errors above.';
+                    return;
+                }
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Sending...';
+                xhrProgress.style.width = '0%';
+
+                const formData = new FormData(form);
+                // append files
+                files.forEach((f, i) => formData.append('files[]', f, f.name));
+                // append client timestamp
+                formData.append('client_ts', new Date().toISOString());
+
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', form.getAttribute('action') || '/submit', true);
+                xhr.upload.onprogress = function(ev){
+                    if (ev.lengthComputable) {
+                        const pct = Math.round((ev.loaded / ev.total) * 100);
+                        xhrProgress.style.width = pct + '%';
+                        xhrProgress.parentElement.setAttribute('aria-hidden', 'false');
+                    }
+                };
+                xhr.onload = function(){
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Send message';
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try{
+                            const resp = JSON.parse(xhr.responseText || '{}');
+                            formStatus.style.color = '';
+                            formStatus.textContent = resp.message || 'Message sent successfully.';
+                            form.reset();
+                            files = [];
+                            renderFiles();
+                            xhrProgress.style.width = '100%';
+                        }catch(err){
+                            formStatus.textContent = 'Server responded with success.';
+                        }
+                    } else {
+                        formStatus.style.color = 'var(--danger)';
+                        formStatus.textContent = 'Submission failed. Try again later.';
+                    }
+                };
+                xhr.onerror = function(){
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Send message';
+                    formStatus.style.color = 'var(--danger)';
+                    formStatus.textContent = 'Network error. Please check your connection.';
+                };
+                xhr.send(formData);
+            });
+
+            resetBtn.addEventListener('click', () => {
+                form.reset();
+                files = [];
+                renderFiles();
+                msgCount.textContent = '0 / ' + message.maxLength;
+                formStatus.textContent = '';
+                showError(document.getElementById('err-fullname'), '');
+                showError(document.getElementById('err-email'), '');
+                showError(document.getElementById('err-message'), '');
+            });
+
+            // Accessibility: show validation messages on blur
+            [fullname, email, message].forEach(el => {
+                el.addEventListener('blur', () => {
+                    validate();
+                });
+            });
+
+            // Initialize state
+            msgCount.textContent = message.value.length + ' / ' + message.maxLength;
+        })();
+    </script>
+    </form>
+</body>
+</html>
